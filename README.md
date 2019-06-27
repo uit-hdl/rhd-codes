@@ -1,2 +1,2 @@
 # rhd-codes
-Automatic transcription of numeric codes from Norwegian population census
+Automatic transcription of handwritten numeric codes from Norwegian 1950 population census
