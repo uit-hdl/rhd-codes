@@ -1,0 +1,115 @@
+def data_augmentation(path, iterations):
+    
+    from imgaug import augmenters as iaa
+    
+    db = DbHandler(path)
+        
+    out_path = 'C:\\DB\\data_aug_all_1_digit.db'
+    conn = sqlite3.connect(out_path)
+    c = conn.cursor()
+    
+    digit = 1
+    while digit < 10:
+        images = db.select_by_actual_digit('split_grey', str(digit))    
+        # Decode the images
+        decoded_images = []
+        for image in images:
+            im = decode_image(image[2])
+            im = np.expand_dims(im, axis=-1)
+            
+            # Get the original variables that are needed to upload the augmented images back into the training set
+            orig_name = image[1]
+            row = image[4]
+            pos = image[5]
+            actual_digits = image[6]
+            number_of_digits = image[7]
+            source = image[8]
+            
+            # Make sure only valid, greyscale images, are kept
+            if len(im.shape) < 4:
+                decoded_images.append( (im, orig_name, row, pos, actual_digits, number_of_digits, source) )
+        
+        # Define how many images you want to create
+        # Each iteration is a doubling of the original set of images. 
+        # If you have 1000 images, setting iterations = 4 will net you 4000 images
+        j = 0
+        end = iterations
+        while j < end:
+    
+            # The transformations / augmentations we want to perform on the images
+            seq = iaa.Sequential([
+                iaa.Affine(
+                    scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
+                    translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)},
+                    rotate=(-25, 25),
+                    shear=(-8, 8)
+                ),
+                iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05*255), per_channel=0.5),
+                iaa.Crop(percent=(0, 0.1)),
+                iaa.LinearContrast((0.75, 1.5)),
+                iaa.Multiply((0.6, 1.1), per_channel=0.2),
+                    ], random_order = True)
+        
+            
+            augmented_images = seq(images= [x[0] for x in decoded_images])
+            
+            insert_query = """INSERT INTO images (original, augmented, orig_name, row, position, actual_digits, number_of_digits, source) VALUES (?,?,?,?,?, ?, ?, ?) """
+            
+            # Convert both images to binary
+            i = 0
+            while i < len(augmented_images):
+                original = cv2.imencode('.jpg', decoded_images[i][0])[1]
+                augmented = cv2.imencode('.jpg', augmented_images[i])[1]
+                orig_name = 'augmented_' + str(j) + '_' + decoded_images[i][1]
+                row = decoded_images[i][2]
+                position = decoded_images[i][3]
+                actual_digits = decoded_images[i][4]
+                number_of_digits = decoded_images[i][5]
+                source = decoded_images[i][6]
+                
+                
+                insert_tuple = (original, augmented, orig_name, row, position, actual_digits, number_of_digits, source)
+                c.execute(insert_query, insert_tuple)
+                conn.commit()
+                print('Completed image number {} out of {} in iteration {} out of {} for digit {}'.format(str(i), len(augmented_images), j+1, end, digit))
+                
+                i += 1
+            
+            j += 1 
+            
+        digit += 1
+        
+    c.close()
+    
+# Add the augmented images into your training set database
+def augment_database(inn, out):
+    
+    out_conn = sqlite3.connect(out)
+    out_c = out_conn.cursor()
+    
+    in_conn = sqlite3.connect(inn)
+    in_c = in_conn.cursor()
+    
+    aug_query = """SELECT orig_name, augmented, row, position, actual_digits, number_of_digits, source FROM images"""
+    augmented = in_c.execute(aug_query).fetchall()
+    
+    i = 0
+    for a in augmented:
+        out_query = """INSERT INTO split_grey (name, image, row, position, actual_digits, number_of_digits, source) VALUES (?,?,?,?,?,?,?)"""
+        out_c.execute(out_query, (a[0], a[1], a[2], a[3], a[4], a[5], a[6]))
+        out_conn.commit()
+        
+        print('Uploaded image number {} out of {}.'.format(i, len(augmented)))
+        i += 1
+        
+    out_c.close()
+    in_c.close()
+    
+
+one_digit_path = '\\\\129.242.140.132\\remote\\UtklippsDatabaser\\full_1digit_trainingset.db'
+iterations = 4
+data_augmentation(one_digit_path, iterations)
+
+augment_in_path = 'C:\\DB\\data_aug_all_1_digit.db'
+augment_out_path = 'C:\\DB\\full_1digit_trainingset_augmented_all_digits.db'
+augment_database(augment_in_path, augment_out_path)
