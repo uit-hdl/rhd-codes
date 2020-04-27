@@ -1,0 +1,161 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Sep 27 09:49:44 2019
+
+@author: bpe043
+"""
+
+import os
+import pickle
+
+import sys
+sys.path.insert(0, '//homer.uit.no/bpe043/Desktop/Test_Projects/HelperFunctions')
+
+from Database.dbHandler import DbHandler
+
+import color_convert
+import sheer_image
+import db_image_decode
+
+def setup(coordinate_path):
+    
+    with open('all_info.pkl', 'rb') as file:
+        all_info = pickle.load(file)
+
+    skeleton = list(dict.fromkeys((item.split('<')[0],item.split('<')[1]) for item in all_info))
+    del all_info
+    
+    return skeleton
+
+def get_folders(path):
+    # Find all folders of manually transcribed 3-digit codes
+    folders = [f.path for f in os.scandir(path) if f.is_dir()]
+    folders = [f.split('\\')[-1] for f in folders]
+    folders.sort(key = int)
+    
+    # Only keep the folders that contain images of a valid length
+    folders = [s for s in folders if len(s) == 3]
+    
+    return folders
+
+def get_images_from_folder(folder):
+    
+    images = [im for im in os.listdir(folder) if os.path.isfile(os.path.join(folder, im))]
+    
+    return images
+
+# Finds the image in the "skeleton" file, an index of where each image is stored
+def get_bone_from_skeleton(img_name, skeleton):
+    
+    bone = None
+    
+    # Find the original census image where this cell image was cut out
+    for bones in skeleton:
+        if img_name in bones:
+            bone = bones[0] + '\\' + bones[1] + '.jpg'
+            break
+        
+    return bone
+
+def create_full_trainingset_3digit(path, db_input, db_output, skeleton):
+    
+    #total_nr_images = sum([len(x) for x in all_images]) = 39840
+    
+    completed = 0
+    db_error = 0
+    folders = get_folders(path)
+
+    # Iterate over each folder of valid codes
+    for folder in folders:
+        db_errors_in_folder = 0
+        folder_images_completed = 0
+        current_folder = path + '\\' + folder
+        
+        # Get all the images in the folder
+        images = get_images_from_folder(current_folder)
+
+        # Iterate over all the images in the folder
+        for image in images:
+                        
+            # Check if the cell image already exists in the table, in case any duplicates managed to sneak into some of the folders, or we had to restart the program
+            cell_exists = db_output.test_exists_any(image, 'cells')
+            if cell_exists:
+                print('Skipped an image that already existed.')
+            else:
+                
+                image_info = image.split('_27')
+                code = folder
+                row = image_info[0]
+                image_name = image_info[1].split('.')[0]
+                
+                # Get the "new" version of the image
+                db_img = db_input.test_exists_any(image, 'fields')
+                
+                # As the coordinate file does not encompass All the images yet, we need to check if the current image is one that has been covered by the coordinate file
+                if db_img is None:
+                    db_error += 1
+                    db_errors_in_folder += 1
+                    print('Skipping image that was not covered in the coordinate file.')
+                    continue
+                else:
+                    decoded_image = db_image_decode.decode_image(db_img[1])
+                
+                bw_img = color_convert.convert_img_bw(decoded_image)
+                
+                new_dims = sheer_image(bw_img)
+                bw_img = bw_img[:, new_dims[0]:new_dims[1]]
+                decoded_image = decoded_image[:, new_dims[0]:new_dims[1]]
+                grey_img = color_convert.convert_img_gray(decoded_image)
+     
+                if grey_img[0] is True:
+                    cell_images = [decoded_image, bw_img, grey_img[1]]
+                else:
+                    cell_images = [decoded_image, bw_img]
+                
+                
+                # Find the original census image where this cell image was cut out
+                source = get_bone_from_skeleton(image_name, skeleton)
+                
+                # Upload the cell images to the table
+                db_output.store_cells_one_table(image, cell_images, row, code, source)
+                
+                folder_images_completed += 1
+                completed += 1
+                
+                perc_done_images = (folder_images_completed / len(images)) * 100
+                perc_done_folders = ( folders.index(folder)/ len(folders)) * 100
+                
+                print('Uploaded image: {}. Number {} out of {}. {}% done with this folder, {}% done with all folders'.format(image, folder_images_completed, len(images), perc_done_images, perc_done_folders ) )
+                
+                
+        # completed the images in one of the folders
+        with open('Full_3digit_trainingset_report.txt', 'a') as file:
+            file.write('Completed folder {}. Number of uploaded images: {}. Number of errors: {}\n\n'.format(folder, folder_images_completed, db_errors_in_folder))
+            
+    # completed all the folders
+    with open('Full_3digit_trainingset_report.txt', 'a') as file:
+        file.write('\nAll folders completed. Number of total uploaded images: {}. Number of total errors: {}'.format(completed, db_error))
+            
+  
+
+# OUTPUT database
+db_loc_full_3digit = '\\\\129.242.140.132\\remote\\UtklippsDatabaser\\full_3digit_trainingset.db'
+db_3digit_output = DbHandler(db_loc_full_3digit, full = True)
+
+# INNPUT database
+db_path = '\\\\129.242.140.132\\remote\\UtklippsDatabaser\\3digit_occupation_codes_all.db'
+db_input = DbHandler(db_path)
+
+path = '\\\\129.242.140.132\\remote\\Yrke\\sortert_koder\\bw\\tresiffret'
+coordinate_path = '\\\\129.242.140.132\\remote\\INNSIDER_kordinater\\Coordinates.txt'
+
+""" This function has to be run first """
+skeleton = setup(coordinate_path)
+print('Finished loading the skeleton file')
+
+create_full_trainingset_3digit(path, db_input, db_3digit_output, skeleton)   
+
+# Close the databases
+db_3digit_output.close()
+db_input.close()
+
