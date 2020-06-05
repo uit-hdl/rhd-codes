@@ -105,7 +105,6 @@ def decode_and_convert(names_and_images, batch_number):
         print('Complated number {} out of {}.'.format(index, total)) 
         index += 1
     
-    #names_and_images.to_csv('C:\Production Images\\batch_{}.csv'.format(batch_number), sep = ';', index = False)
     decoded_images = np.array(decoded_images)
     np.save('C:\Production Images\\batch_{}_names'.format(batch_number), names)
     np.save('C:\Production Images\\batch_{}_images'.format(batch_number), decoded_images)
@@ -149,8 +148,6 @@ def three_digit_production(batch_number):
     conf.to_csv('C:\\Production images\\Production_results\\batch_{}_results.csv'.format(batch_number), sep = ';', index=False)
     
     print('Results saved')
-     
-    return (labels, conf)
 
 
 def main():
@@ -179,7 +176,7 @@ def main():
     batch_number = 0
     while ended is False:
         names_and_images = process_batch(db, exclusion_set, str(start), str(end))
-        #names_and_images = True
+
         # Check to see if we have reached the end
         if names_and_images is None:
             ended = True
