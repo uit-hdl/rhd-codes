@@ -61,10 +61,12 @@ def create_X_y(data, db, table, color):
         y.append(label)
         
         
-    # Remove invalid labels and images
-    zero_indexes = [i for i in y if i == '0']
-    del y[: len(zero_indexes)]
-    del X[: len(zero_indexes)]
+# =============================================================================
+#     # Remove invalid labels and images
+#     zero_indexes = [i for i in y if i == '0']
+#     del y[: len(zero_indexes)]
+#     del X[: len(zero_indexes)]
+# =============================================================================
         
     X = np.array(X)
     y = np.array(y)
@@ -252,7 +254,6 @@ def create_model(channels):
     
     model.add(layers.Dense(512, activation='relu'))
     
-    # When you have digits 1-9
     model.add(layers.Dense(10, activation='softmax'))     
     
     
@@ -280,7 +281,7 @@ if three_digit is False:
     digits = 1
     
     # Augment the training set, but not the validation set
-    augment = True
+    augment = False
     iterations = 4
     
 else:
@@ -352,12 +353,9 @@ for color in colors:
             # Use X and y to train the model, store X_val and y_val for validation later on in validation.py
             X, X_val, y, y_val = train_test_split(X, y, test_size = 0.20, stratify=y, shuffle = True)
 
-
-        
-            #np.save('C:\\Models\\Ground_truth_arrays\\1_digit_{}_ground_truth_images'.format(color), X_val)
-            #np.save('C:\\Models\\Ground_truth_arrays\\1_digit_{}_ground_truth_labels'.format(color), y_val)
-    #        np.save('C:\\Models\\Ground_truth_arrays\\1_digit_{}_ground_truth_images_all_digits_augmented'.format(color), X_val)
-    #        np.save('C:\\Models\\Ground_truth_arrays\\1_digit_{}_ground_truth_labels_all_digits_augmented'.format(color), y_val)
+            np.save('C:\\Models\\Ground_truth_arrays\\1_digit_{}_ground_truth_images_all_digits'.format(color), X_val)
+            np.save('C:\\Models\\Ground_truth_arrays\\1_digit_{}_ground_truth_labels_all_digits'.format(color), y_val)
+            
         
     else:
         data = db.select_all_training_images_3digit(color, table)
@@ -419,7 +417,7 @@ for color in colors:
             file.write('Validation accuracy for augmented only-training fold {} for {} was : {}\n\n'.format(index, color, evaluate[-1]))
             
         #model.save('C:\\Models\\Stratified_model_{}-digit_{}_fold_{}.h5'.format(digits, color, index))
-        model.save('C:\\Models\\Stratified_only_augmented_training_model_{}-digit_{}_fold_{}.h5'.format(digits, color, index))
+        model.save('C:\\Models\\Stratified_all_digits_model_{}-digit_{}_fold_{}.h5'.format(digits, color, index))
     
 #        predictions = model.predict(xval)
 
