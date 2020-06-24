@@ -162,8 +162,7 @@ def three_digit():
     new_index.append('weighted avg')
     #df.index = new_index
     
-    #columns =[' ', 'precision', 'recall', 'f1-score', 'support']
-    #df.columns = columns
+
     df['class'] = new_index
     columns =['class', 'precision', 'recall', 'f1-score', 'support']
     df = df[columns]
@@ -179,7 +178,19 @@ def three_digit():
     conf.to_csv('Validation\\Confidence_scores_3_digit.csv', sep = ';', index=False)
                         #columns = [x for x in range(0, 265)])
 
-    df.to_csv('Validation\\3_digit_report_2.csv', sep = ';', index=False)
+    df.to_csv('Validation\\3_digit_report.csv', sep = ';', index=False)
+    
+
+    
+    
+    
+# =============================================================================
+#     conf.to_csv('Validation\\Confidence_scores_3_digit.csv', sep = ';', index=False)
+#                         #columns = [x for x in range(0, 265)])
+# 
+#     df.to_csv('Validation\\3_digit_report_2.csv', sep = ';', index=False)
+#     
+# =============================================================================
 
 
 def predict_and_report(model, x_arr, y_arr, digits, mapping = None, target_names = None):
@@ -223,7 +234,10 @@ def predict_and_report(model, x_arr, y_arr, digits, mapping = None, target_names
         # Can either return the predictions and confidence scrores, or save them as csv in the function
         # Returning for now
         
-        return (df, conf)
+        # For testing production
+        #return (df, conf)
+        return (df, conf, y_pred2)
+    
         #conf.to_csv('Validation\\Confidence_scores_3_digit.csv', sep = ';', index=False)
         #df.to_csv('Validation\\3_digit_report_2.csv', sep = ';', index=False)
         
@@ -242,7 +256,7 @@ def predict_and_report(model, x_arr, y_arr, digits, mapping = None, target_names
 #         df = pd.DataFrame(report).transpose()
 # =============================================================================
         #target names
-        target_names = ['Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9']
+        #target_names = ['Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9']
         
         # Run prediction on the model with the ground truth images, to get the predicted labels
         
@@ -280,7 +294,7 @@ def predict_and_report(model, x_arr, y_arr, digits, mapping = None, target_names
         
         
 
-def both_models():
+def both_models(prod_labels, prod_conf):
     
     # Need ground truth images
     x_3digit_truth = np.load('C:\\Models\\Ground_truth_arrays\\3_digit_original_ground_truth_images.npy')
@@ -310,14 +324,13 @@ def both_models():
         img = x_3digit_truth[index]
         label = y_3digit_truth[index]
         
-        # Labels of 0 are not valid labels
-        if '0' in labels_3digit[index]:
-            print('Skipping label {} because it contains a 0'.format(labels_3digit[index]))
-            index += 1
-            continue
+# =============================================================================
+#         # Labels of 0 are not valid labels
+#         if '0' in labels_3digit[index]:
+#             index += 1
+#             continue
+# =============================================================================
         
-        #unique labels, find 0 labels. labels at least Containing a 0
-        #Se også hvor mange bilder som detter ut
         
         # If the image can be splt into into 1 digits, we add both 3 and 1 digit images to their own lists
         # If it can't we keep the image in another list
@@ -374,27 +387,179 @@ def both_models():
     y_1digit = np.array(y_1digit)
     
     # Now we can send the arrays into model.predict()
+    #df_unsplittable, conf_unsplittable = predict_and_report(model_3digit, x_not_splittable, y_not_splittable, '3', mapping = mapping)
+    
+    # For testing production
+    df_3digit, conf_3digit, old_labels = predict_and_report(model_3digit, x_3digit, y_3digit, '3', mapping = mapping)
+    #df_3digit, conf_3digit = predict_and_report(model_3digit, x_3digit, y_3digit, '3', mapping = mapping)
+    
+    df_1digit, conf_1digit = predict_and_report(model_1digit, x_1digit, y_1digit, '1', target_names = target_names_1digit)
+    
+    # Temporary, for testing the production version
+    return (old_labels, conf_3digit)
+    
+# =============================================================================
+#     # Save results
+#     df_unsplittable.to_csv('Validation\\3digit_unsplittable_results.csv', sep=';')
+#     conf_unsplittable.to_csv('Validation\\3digit_unsplittable_confidence_scores.csv', sep=';', index = False)
+#     
+#     df_3digit.to_csv('Validation\\3digit_results.csv', sep=';')
+#     conf_3digit.to_csv('Validation\\3digit_confidence_scores.csv', sep=';', index = False)
+#     
+#     df_1digit.to_csv('Validation\\1digit_results.csv', sep=';')
+#     conf_1digit.to_csv('Validation\\1digit_confidence_scores.csv', sep=';', index = False)
+# =============================================================================
+    
+    
+def both_models_validation():
+    # Need ground truth images
+    x_3digit_truth = np.load('C:\\Models\\Ground_truth_arrays\\3_digit_original_ground_truth_images.npy')
+    
+    # Need ground truth labels
+    y_3digit_truth = np.load('C:\\Models\\Ground_truth_arrays\\3_digit_original_ground_truth_labels.npy')
+    
+    # Mapping for the labels
+    mapping = np.load('C:\\Models\\Ground_truth_arrays\\3_digit_original_ground_truth_mapping.npy')
+    
+    labels_3digit = [mapping[x] for x in y_3digit_truth]
+    target_names_1digit = ['Class 0', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9']
+    
+    # Lists to hold the images (and their labels) that could not be split
+    x_not_splittable = []
+    y_not_splittable = []
+    index_unsplittable = []
+    
+    # Lists to hold the 3 digit and 1 digit version (along with their respective labels) of the iomages
+    x_3digit = []
+    x_1digit = []
+    
+    y_3digit = []
+    y_1digit = []
+    
+    index_splittable = []
+    
+    index = 0
+    while index < len(x_3digit_truth):
+        img = x_3digit_truth[index]
+        label = y_3digit_truth[index]
+        
+# =============================================================================
+#         # Labels of 0 are not valid labels
+#         if '0' in labels_3digit[index]:
+#             print('Skipping label {} because it contains a 0'.format(labels_3digit[index]))
+#             index += 1
+#             continue
+# =============================================================================
+            
+        
+        # If the image can be splt into into 1 digits, we add both 3 and 1 digit images to their own lists
+        # If it can't we keep the image in another list
+        split = splitter.split_and_convert(img)
+        
+        if split is None:
+            x_not_splittable.append(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
+            y_not_splittable.append(label)
+            index_unsplittable.append(index)
+            index += 1
+            
+        else:
+            # We put the splittable 3 digit image into the list, same with the label
+            x_3digit.append(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
+            y_3digit.append(label)
+            
+            # If any of the split images, for whatever reason, didn't get properly converted, we redo it
+            if len(split[2][0].shape) > 2:
+                split[2][0] = cv2.cvtColor(split[2][0], cv2.COLOR_BGR2GRAY)
+                
+            if len(split[2][1].shape) > 2:
+                split[2][1] = cv2.cvtColor(split[2][1], cv2.COLOR_BGR2GRAY)
+                
+            if len(split[2][2].shape) > 2:
+                split[2][2] = cv2.cvtColor(split[2][2], cv2.COLOR_BGR2GRAY)
+
+             # Then we put the split image into it's list, along with Their leabels
+            x_1digit.append(split[2][0])
+            x_1digit.append(split[2][1])
+            x_1digit.append(split[2][2])
+            
+            # Need to get the actuyal digit instead of the model label for this step
+            label = str(labels_3digit[index])
+            y_1digit.append(int(label[0]))
+            y_1digit.append(int(label[1]))
+            y_1digit.append(int(label[2]))
+            
+            index_splittable.append(index)
+            index += 1
+            
+        
+    # Load in our models
+    model_3digit = load_model('C:\\Models\\Stratified_model_3-digit_greyscale_fold_9.h5')
+    model_1digit = load_model('C:\\Models\\Stratified_model_1-digit_grey_fold_9.h5')
+    
+    # Turn the lists into arrays, and give the X arrays an additional dimension for use in the model
+    x_not_splittable = np.array(x_not_splittable)
+    x_3digit = np.array(x_3digit)
+    x_1digit = np.array(x_1digit)
+    
+    x_not_splittable = np.expand_dims(x_not_splittable, axis=-1)
+    x_3digit = np.expand_dims(x_3digit, axis=-1)
+    x_1digit = np.expand_dims(x_1digit, axis=-1)
+    
+    y_not_splittable = np.array(y_not_splittable)
+    y_3digit = np.array(y_3digit)
+    y_1digit = np.array(y_1digit)
+    
+    # Now we can send the arrays into model.predict()
     df_unsplittable, conf_unsplittable = predict_and_report(model_3digit, x_not_splittable, y_not_splittable, '3', mapping = mapping)
     df_3digit, conf_3digit = predict_and_report(model_3digit, x_3digit, y_3digit, '3', mapping = mapping)
     df_1digit, conf_1digit = predict_and_report(model_1digit, x_1digit, y_1digit, '1', target_names = target_names_1digit)
     
-    # Save results
-    df_unsplittable.to_csv('Validation\\3digit_unsplittable_results.csv', sep=';')
-    conf_unsplittable.to_csv('Validation\\3digit_unsplittable_confidence_scores.csv', sep=';', index = False)
     
-    df_3digit.to_csv('Validation\\3digit_results.csv', sep=';')
-    conf_3digit.to_csv('Validation\\3digit_confidence_scores.csv', sep=';', index = False)
+    # Create frames containing information needed to validate the models
     
-    df_1digit.to_csv('Validation\\1digit_results.csv', sep=';')
-    conf_1digit.to_csv('Validation\\1digit_confidence_scores.csv', sep=';', index = False)
+    # Append the true labels for 3 digit images to the confidence scores for splittable 3 digit images
+    true_labels_splittable_3digit = [labels_3digit[x] for x in index_splittable]
+    conf_3digit['True_Label'] = true_labels_splittable_3digit
     
-    print('Finished! Yuhuu!')
+    # Append the true labels for 3 digit images to the confidence scores for unsplittable 3 digit images
+    true_labels_unsplittable_3digit = [labels_3digit[x] for x in index_unsplittable]
+    conf_unsplittable['True_Label'] = true_labels_unsplittable_3digit
+    
+    # Collect all confidence scores for each 1-digit image, 3 by the 3, to get a "combined confidence score for a 3-digit image put together from 3 1-digit images"
+    
+    # Start by making a dataframe to hold all our values
+    combined_frame = pd.DataFrame(data = true_labels_splittable_3digit, columns = ['True_Label'], dtype = 'object')
+    combined_frame['conf_first_digit'] = np.nan
+    combined_frame['conf_second_digit'] = np.nan 
+    combined_frame['conf_third_digit'] = np.nan 
+    
+    combined_frame['conf_first_digit'] = combined_frame['conf_first_digit'].astype('object')
+    combined_frame['conf_second_digit'] = combined_frame['conf_second_digit'].astype('object')
+    combined_frame['conf_third_digit'] = combined_frame['conf_third_digit'].astype('object')
+    
+    idx = 0
+    sub_idx = 0
+    while idx < len(true_labels_splittable_3digit):
+        combined_frame.at[idx, 'conf_first_digit'] = conf_1digit.iloc[sub_idx].to_list()
+        combined_frame.at[idx, 'conf_second_digit'] = conf_1digit.iloc[sub_idx+1].to_list()
+        combined_frame.at[idx, 'conf_third_digit'] = conf_1digit.iloc[sub_idx+2].to_list()
+        idx += 1
+        sub_idx += 3
+        
+    # Save all the new frames
+    #conf_unsplittable.to_csv('Validation\\Einar\\3digit_unsplittable_confidence_scores.csv', sep=';', index = False)
+    
+    #conf_3digit.to_csv('Validation\\Einar\\3digit_confidence_scores.csv', sep=';', index = False)
+    
+    #combined_frame.to_csv('Validation\\einar\\3_x_1_confidence_scores.csv', sep=';', index = False)
     
 
 
 
 
-both_models()
+three_digit()
+both_models(prod_labels, prod_conf)
+#both_models_validation()
     
     
 # Need ground truth images
