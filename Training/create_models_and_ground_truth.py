@@ -8,6 +8,7 @@ Created on Mon Nov  4 11:50:57 2019
 import cv2
 import numpy as np
 import pandas as pd
+import math
 
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
@@ -266,9 +267,20 @@ def get_score(model, X_train, X_test, y_train, y_test):
     
     return model.score(X_test, y_test)
 
+def final_model(X, y, batch_size, se_2):
+    n_epochs = se_2
+    
+    model_2 = create_3digit_model(channels)
+    
+    print('Performing final training with {} epochs on {} training samples. Almost done... hopefully'.format(str(n_epochs), str(X.shape[0])))
+    
+    model_2.fit(X, y, batch_size = batch_size, epochs = n_epochs, validation_split = 0)
+    
+    model_2.save('C:\\Models\\Current models\\KFold_stratified_model_{}-digit_{}_{}_epochs.h5'.format(digits, color, n_epochs))
+
 
 # Currently working on 1 digit or 3 digit
-three_digit = False
+three_digit = True
 
 
 if three_digit is False:    
@@ -291,8 +303,8 @@ else:
     table = 'cells'
     digits = 3
     #colors = ['greyscale',  'black_white', 'original']
-    #colors = ['greyscale']
-    colors = ['original'] # For the greound truth that will be used by both 3 and 1 digit models
+    colors = ['greyscale']
+    #colors = ['original'] # For the greound truth that will be used by both 3 and 1 digit models
     validationMetric = 'val_acc'
     
     
@@ -366,58 +378,142 @@ for color in colors:
         # Use X and y to train the model, store X_val and y_val for validation later on in validation.py
         X, X_val, y, y_val = train_test_split(X, y, test_size = 0.20, shuffle = True)
         
-        np.save('C:\\Models\\Ground_truth_arrays\\3_digit_{}_ground_truth_images'.format(color), X_val)
-        np.save('C:\\Models\\Ground_truth_arrays\\3_digit_{}_ground_truth_labels'.format(color), y_val)
-
+        #np.save('C:\\Models\\Ground_truth_arrays\\3_digit_{}_ground_truth_images'.format(color), X_val)
+        #np.save('C:\\Models\\Ground_truth_arrays\\3_digit_{}_ground_truth_labels'.format(color), y_val)
+        
     
-
+    """ Einar's k-fold suggestion """
+    
     # Batch size
     batch_size = 32
     
-    """ K-fold """
+    k = 10
     
-    splits = 10
-    fold = 0
     
-    # Clear model and create it
-    model = None
-    if digits == 1:    
-        model = create_model(channels)
-    else:
+    skf = StratifiedKFold(n_splits = k, shuffle = True) # Shuffle provides randomized indices
+    
+    stopping = pd.DataFrame(None, columns = ['f0', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9'])
+    train_loss = pd.DataFrame(None, columns = ['f0', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9'])
+    
+    
+    for index, (train_indices, val_indices) in enumerate(skf.split(X, y)):  # For fold in folds
+        # Clear model and create it
         model = create_3digit_model(channels)
-    
-    #Instantate the cross validator
-    skf = StratifiedKFold(n_splits = splits, shuffle = True)
-    
-    for index, (train_indices, val_indices) in enumerate(skf.split(X, y)):
+        
         print('Training on fold {}/10 for {}...'.format(index+1, color))
         
         xtrain, xval = X[train_indices], X[val_indices]
         ytrain, yval = y[train_indices], y[val_indices]
-        
+
         print('Training new interation on {} training samples, {} validation samples. This may be a while...'.format(str(xtrain.shape[0]), str(xval.shape[0])))
         
-        history = model.fit(xtrain, ytrain, batch_size = batch_size, epochs = 10)
+        history = model.fit(xtrain, ytrain, batch_size = batch_size, epochs = 25, validation_data = (xval, yval) )
         
-        evaluate = model.evaluate(xval, yval)
-        print('Model evaluation ', evaluate)
-        
-        accuracy_history = history.history['acc']
-        #val_accuracy_history = history.history['val_accuracy']
-        
-        print('Last training accuracy: {}'.format(str(accuracy_history[-1])))
-        
-        with open('Models2\\Results.txt', 'a') as file:
-        #with open('Models2\\1-digit\\Results.txt', 'a') as file:
+        stopping[stopping.columns[index]] = history.history['val_loss']
+        train_loss[train_loss.columns[index]] = history.history['loss']
+    
+    # Plotting all k of the value loss per epoch 
+    ax = stopping.plot(kind = 'line', legend = False, color = ['lightgrey'])
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Validation loss')
+    
+    
+    # The expected (average) loss for each number of epochs
+    mus = stopping.mean(numeric_only = True, axis = 1)
+    
+    # The standard deviation for each number of epochs
+    sds = stopping.std(axis = 1, skipna = True)     # Gets standard deviation per columns
+    ses = sds / math.sqrt(k-1)                      # Standard errors
+    
+    # Expected loss
+    ax.plot(mus, color = 'black', linewidth = 2)
+    
+    # Confidence limits
+    ax.plot(mus + 2*ses, color = 'black', linewidth = 1.2)
+    ax.plot(mus - 2*ses, color = 'black', linewidth = 1.2)
+    
+    # Smallest loss
+    mn = mus.idxmin()
+    
+    # Hastie and Tibshirani recommend taking the most conservative value (smallest number of epochs for us)
+    # that is within one standard error of the minimum value
+    upper = mus[mn] + ses[mn]
+    lower = mus[mn] - ses[mn]
+    se_1 = mus.between(lower, upper)
+    se_2 = mus[se_1.values].idxmin() + 1 # Due to python starting it's count at 0
+    
+    # Shows minimum
+    ax.axvline(x = mn, linestyle = 'dashed', linewidth = 2)
+    
+    # Shows the se_2 value (might be the same)
+    # se_2 -1 to get back to the actual value, instead of the index value
+    ax.axvline(x = se_2 - 1, linestyle = 'dashed', color = 'red', linewidth = 2)
+    
+    # Save fig
+    ax.figure.savefig('ValidationLoss_Epoch.png', dpi = 300)
+    
 # =============================================================================
-#             file.write('Training accuracy for fold {} for {} was : {}\n'.format(index, color, accuracy_history[-1]))
-#             file.write('Validation accuracy for fold {} for {} was : {}\n\n'.format(index, color, evaluate[-1]))
+#     n_epochs = se_2
+#     
+#     model_2 = create_3digit_model(channels)
+#     
+#     print('Performing final training with {} epochs on {} training samples. Almost done... hopefully'.format(str(n_epochs), str(X.shape[0])))
+#     
+#     history_2 = model_2.fit(X, y, batch_size = batch_size, epochs = n_epochs, validation_split = 0)
+#     
+#     model_2.save('C:\\Models\\Current models\\KFold_stratified_model_{}-digit_{}_{}_epochs.h5'.format(digits, color, n_epochs))
 # =============================================================================
-            file.write('Training accuracy for augmented only-training fold {} for {} was : {}\n'.format(index, color, accuracy_history[-1]))
-            file.write('Validation accuracy for augmented only-training fold {} for {} was : {}\n\n'.format(index, color, evaluate[-1]))
-            
-        #model.save('C:\\Models\\Stratified_model_{}-digit_{}_fold_{}.h5'.format(digits, color, index))
-        model.save('C:\\Models\\Stratified_all_digits_model_{}-digit_{}_fold_{}.h5'.format(digits, color, index))
+    
+# =============================================================================
+# 
+#     # Batch size
+#     batch_size = 32
+#     
+#     """ K-fold """
+#     
+#     splits = 10
+#     fold = 0
+#     
+#     # Clear model and create it
+#     model = None
+#     if digits == 1:    
+#         model = create_model(channels)
+#     else:
+#         model = create_3digit_model(channels)
+#     
+#     #Instantiate the cross validator
+#     skf = StratifiedKFold(n_splits = splits, shuffle = True)
+#     
+#     for index, (train_indices, val_indices) in enumerate(skf.split(X, y)):
+#         print('Training on fold {}/10 for {}...'.format(index+1, color))
+#         
+#         xtrain, xval = X[train_indices], X[val_indices]
+#         ytrain, yval = y[train_indices], y[val_indices]
+#         
+#         print('Training new interation on {} training samples, {} validation samples. This may be a while...'.format(str(xtrain.shape[0]), str(xval.shape[0])))
+#         
+#         history = model.fit(xtrain, ytrain, batch_size = batch_size, epochs = 10)
+#         
+#         evaluate = model.evaluate(xval, yval)
+#         print('Model evaluation ', evaluate)
+#         
+#         accuracy_history = history.history['acc']
+#         #val_accuracy_history = history.history['val_accuracy']
+#         
+#         print('Last training accuracy: {}'.format(str(accuracy_history[-1])))
+#         
+#         with open('Models2\\Results.txt', 'a') as file:
+#         #with open('Models2\\1-digit\\Results.txt', 'a') as file:
+# # =============================================================================
+# #             file.write('Training accuracy for fold {} for {} was : {}\n'.format(index, color, accuracy_history[-1]))
+# #             file.write('Validation accuracy for fold {} for {} was : {}\n\n'.format(index, color, evaluate[-1]))
+# # =============================================================================
+#             file.write('Training accuracy for augmented only-training fold {} for {} was : {}\n'.format(index, color, accuracy_history[-1]))
+#             file.write('Validation accuracy for augmented only-training fold {} for {} was : {}\n\n'.format(index, color, evaluate[-1]))
+#             
+#         model.save('C:\\Models\\Stratified_model_no_validation_{}-digit_{}_fold_{}.h5'.format(digits, color, index))
+#         #model.save('C:\\Models\\Stratified_all_digits_model_{}-digit_{}_fold_{}.h5'.format(digits, color, index))
+# =============================================================================
     
 #        predictions = model.predict(xval)
 
