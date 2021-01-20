@@ -123,21 +123,117 @@ class DbHandler:
         
         
         
+
+   
+    # Update a full-column database with predicted labels
+    def update_with_labels(self, label, image_name):
+        
+        # Get the image from fields
+        c = self.connection.cursor()
+        c.execute("SELECT Image FROM fields WHERE Name=:name", {'name': image_name})
+        orig_image = c.fetchone()
+        
+        # Check if image is already present in predictions, if it is, then skip it
+        c.execute('SELECT * FROM predictions WHERE name=:name', {'name': image_name})
+        result = c.fetchone()
+        
+        if result is not None:
+            return None
         
         
+        c.execute('INSERT OR IGNORE into predictions (name, image, predicted_label) VALUES (?, ?, ?)',
+                               (image_name, orig_image[0], str(label)))
+        
+        self.connection.commit()
+        
+    # Select random N rows from table
+    def select_random_any(self, table):
+        query = 'SELECT * FROM "{}" ORDER BY RANDOM() LIMIT 50'.format(table)
+        c = self.connection.cursor()
+        c.execute(query)
+        
+        return c.fetchall()
+    
+    # Select image names
+    def select_filenames_any(self, table):
+        query = 'SELECT Name FROM "{}"'.format(table)
+        c = self.connection.cursor()
+        c.execute(query)
+        
+        return c.fetchall()
+    
+    # Select image based on name
+    def select_image_from_name_any(self, table, image_name):
+        query = 'SELECT Image FROM "{}" WHERE Name == "{}"'.format(table, image_name)
+        c = self.connection.cursor()
+        c.execute(query)
+        
+        return c.fetchall()
         
         
+    # Getting all the labels from a 3digit trainingset
+    def select_trainingset_labels(self):
+        query = 'SELECT code FROM cells'
+        c = self.connection.cursor()
+        c.execute(query)
+        return c.fetchall()
+    
+    # Select all images from the database
+    def select_name_and_images_any_batch(self, table, image_column, start, end):
+        query = 'SELECT Name, "{}" FROM "{}" WHERE ROWID > "{}" AND ROWID <= "{}"'.format(image_column, table, start, end)
+        c = self.connection.cursor()
+        c.execute(query)
+        return c.fetchall()
+    
+    def select_name_images_and_labels_any_batch(self, table, start, end):
+        
+        query = 'SELECT Name, Original, Code FROM "{}" WHERE ROWID > "{}" AND ROWID <= "{}"'.format(table, start, end)
+        c = self.connection.cursor()
+        c.execute(query)
+        return c.fetchall()
+    
+    def select_name_images_and_labels_any_batch_augmented(self, table, start, end):
+        
+        query = 'SELECT Name, Augmented, Code, Source FROM "{}" WHERE ROWID > "{}" AND ROWID <= "{}"'.format(table, start, end)
+        c = self.connection.cursor()
+        c.execute(query)
+        return c.fetchall()
+        
+    def select_name_images_and_labels_any_batch_1digit(self, table, start, end):
+            
+        query = 'SELECT Name, image, actual_digits FROM "{}" WHERE ROWID > "{}" AND ROWID <= "{}"'.format(table, start, end)
+        c = self.connection.cursor()
+        c.execute(query)
+        return c.fetchall()
+        
+    def select_name_and_images_batch(self, table, start, end):
+        
+        query = 'SELECT Name, Image FROM "{}" WHERE ROWID > "{}" AND ROWID <= "{}"'.format(table, start, end)
+        #query = 'SELECT Name, Image FROM "{}" WHERE ROWID > "{}" AND ROWID <= "500000"'.format(table, start, end)
+        c = self.connection.cursor()
+        c.execute(query)
+        result = c.fetchall()
+        
+        return result
         
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
+    def select_name_and_images_any(self, table):
+        query = 'SELECT Name, Image FROM "{}"'.format(table)
+        c = self.connection.cursor()
+        c.execute(query)
+        return c.fetchall()
+    
+    def select_images_and_rowid_any(self, table):
+        query = 'SELECT Image, RowID FROM "{}"'.format(table)
+        c = self.connection.cursor()
+        c.execute(query)
+        return c.fetchall()
+    
+    def select_name_and_images_any_grayscale(self, table):
+        query = 'SELECT name, greyscale FROM "{}"'.format(table)
+        c = self.connection.cursor()
+        c.execute(query)
+        return c.fetchall()
         
 
 
@@ -194,7 +290,14 @@ class DbHandler:
         return self.connection.cursor().execute("SELECT * FROM fields")
     
     def select_all_training_images(self, table):
-        query = 'SELECT * FROM {} ORDER BY actual_digits'.format(table)
+        query = 'SELECT image, actual_digits FROM {} ORDER BY actual_digits'.format(table)
+        
+        c = self.connection.cursor()
+        c.execute(query)
+        return c.fetchall()
+    
+    def select_all_training_images_3digit(self, column, table):
+        query = 'SELECT {}, code FROM {} ORDER BY code'.format(column, table)
         
         c = self.connection.cursor()
         c.execute(query)
@@ -216,7 +319,11 @@ class DbHandler:
     
     def select_by_actual_digit(self, table, digit):
         query = 'SELECT * FROM "{}" WHERE actual_digits = "{}"'.format(table, digit)
-        return self.connection.cursor().execute(query)
+        
+        c = self.connection.cursor()
+        c.execute(query)
+        return c.fetchall()
+        
     
     def select_by_multiple_digits(self, table, digit_list):
         digit_list = ["1", "2", "3", "4"]

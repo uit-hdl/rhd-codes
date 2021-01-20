@@ -121,7 +121,6 @@ def connect_train(db):
     
 def connect_validate(db):
 
-    
     """ Her skal tabellen(e) som skal holde på de forskjellige treningsbildene og originalene som dem kommer fra lages """
     conn = sqlite3.connect(db)
     c = conn.cursor()

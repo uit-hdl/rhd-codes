@@ -15,16 +15,21 @@ def sheer_image(img):
     start = None
     end = None
     i = 5
-    while i < img.shape[1]:
+    flag = False
+    while i < img.shape[1] and start is None:
         row = img[:, i]
         if row.sum() < limit and start is None:
-            start = i
+            if flag: 
+                start = i
+            else:
+                flag = True
             
         i += 1
         
     i = img.shape[1]-5
 	
     stop = False
+    flag = False
     while stop is False:
         
         if i < 0:
@@ -33,19 +38,22 @@ def sheer_image(img):
         
         row = img[:, i]
         if row.sum() < limit and end is None:
-            end = i
-            stop = True
+            if flag:
+                end = i
+                stop = True
+            else:
+                flag = True
         
         i -= 1
         
     return start, end
 	
-def sheer_image_horizontally(img):
+def sheer_image_vertically(img):
     limit = 255 * img.shape[1]
     start = None
     end = None
     i = 5
-    while i < img.shape[0]:
+    while i < img.shape[0] and start is None:
         row = img[i, :]
         if row.sum() < limit and start is None:
             start = i
