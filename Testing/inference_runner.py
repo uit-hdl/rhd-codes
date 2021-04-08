@@ -10,13 +10,6 @@ from inference import main
 import sqlite3
 import tensorflow as tf
 
-
-
-
-""" Seems even doing inference in relatively small batches takes up too much memory currently.
-    Therefore I'm trying to create an external script to handle the "Divide into batches and send each batch to inference" part, to allow the OS to reclaim the memory from the process """
-    
-    
     
     
     
@@ -29,18 +22,18 @@ batch_index = 0
 
 
 # Get cursor from the database
-db = sqlite3.connect('\\\\129.242.140.132\\remote\\UtklippsDatabaser\\3digit_Occupational_Codes_All_longer.db')
+db = sqlite3.connect("<Path_to_your_database>")
 cur = db.cursor()
 
 # Exclusion set
-dugnad = sqlite3.connect('\\\\129.242.140.132\\remote\\UtklippsDatabaser\\dugnads_sett_no_u.db')
-exclusion_names = dugnad.cursor().execute("SELECT Name FROM CELLS").fetchall()
+training_db = sqlite3.connect("<Path_to_your_training_set_database>")
+exclusion_names = training_db.cursor().execute("<Select_training_images_names_query>").fetchall()
 exclusion_set = [x[0] for x in exclusion_names]
     
 # Prediction model
-prediction_model = tf.keras.models.load_model('dugnad_ctc_prediction', compile = False)
+prediction_model = tf.keras.models.load_model("<Path_to_saved_model>", compile = False)
 
-# While our start does not exceed the max number of images
+# While we still have images to classify
 while result == True:
 
     result = main(batch_index, start, end, cur, prediction_model, exclusion_set)
