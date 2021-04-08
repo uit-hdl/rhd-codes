@@ -13,7 +13,7 @@ from tensorflow.keras import layers
 import pandas as pd
 
 from datetime import datetime
-import gc
+
 
 def encode_single_sample_inference(img):
     # 1. Read image
@@ -93,7 +93,7 @@ def main(batch_index, start, end, cur, prediction_model, exclusion_set):
     
     data_names = [x[0] for x in data]
     
-    # Remove all the indexes from names_and_images where the image is in the exclusion_set
+    # Remove all the indexes from the image list where the image is in the exclusion_set
     keep_indexes = []
     keep_index = 0
     for n in data_names:
