@@ -50,7 +50,7 @@ def decode_batch_predictions(pred):
 # Get images from the database
 def get_images(cur, start, end):
     
-    data = cur.execute("SELECT Name, Image FROM FIELDS WHERE ROWID > {} AND ROWID < {}".format(start, end)).fetchall()
+    data = cur.execute("<Select_query_for_images>").fetchall()
     
     return data
     
@@ -155,17 +155,8 @@ def main(batch_index, start, end, cur, prediction_model, exclusion_set):
         
     # Store the confidence score dataframe
     confidence_scores_batch = confidence_scores_batch.round(2)
-    confidence_scores_batch.to_csv('C://New_production_results//CTC_dugnad//Batch_{}.csv'.format(batch_index), sep = ';', encoding = 'utf-8')
+    confidence_scores_batch.to_csv("<Path_to_store_confidence_scores>", sep = ';', encoding = 'utf-8')
     
-    del data
-    del keep_indexes
-    del img_bytes
-    del names
-    del validation_dataset
-    del confidence_scores_batch
-    del confs
-    
-    gc.collect()
     
     return True
     
