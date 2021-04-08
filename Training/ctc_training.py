@@ -126,7 +126,6 @@ def split_data(images, labels, train_size = 0.9, shuffle=True):
 # Getting the images into the proper form for prediction
 def encode_single_sample(img_path, label):
     # 1. Read image
-    # For us, this is just the byte data from the database
     img = tf.io.read_file(img_path)
     # 2. Decode and convert to grayscale
     img = tf.io.decode_png(img, channels=1)
@@ -160,7 +159,7 @@ def decode_batch_predictions(pred):
 
     
 
-data_dir = Path("C://Dugnad_images_no_u//")
+data_dir = Path("<Path_to_your_images>")
 images = sorted(list(map(str, list(data_dir.glob("*.jpg")))))
 labels = [img.split(os.path.sep)[-1].split("-")[0] for img in images]
 names = [x.split('-')[1].split('.')[0] for x in images]
@@ -258,7 +257,7 @@ prediction_model = keras.models.Model(
 )
 prediction_model.summary()
 
-prediction_model.save("dugnad_ctc_prediction")
+prediction_model.save("<Path_to_store_the_model>")
       
 
 # Lists used to determine number of "correct" and "uncorrect" predictions
@@ -338,12 +337,12 @@ for batch in validation_dataset.take(-1):
         img = (batch_images[i] * 255).numpy().astype("uint8")
         img = img[:, :, 0].T
         lbl = pred_texts[i] + '.png'
-        lbl = "New_folder//" + str(batch_index) + "//image_nr_" + str(i) + '_' + lbl
+        lbl = "<Path_to_store_image>"
         cv2.imwrite(lbl, img)
         
 
     # At the end of the batch, we store the batch dataframe, and we also append it to our total dataframe
-    confidence_scores_batch.to_csv("New_folder//{}//confidence_scores.csv".format(batch_index), sep = ';', encoding = "utf-8")
+    confidence_scores_batch.to_csv("<Path_to_store_batch_confidence_scores>", sep = ';', encoding = "utf-8")
     confidence_scores = confidence_scores.append(confidence_scores_batch, ignore_index = True)
     
     print(batch_index)
@@ -352,16 +351,9 @@ for batch in validation_dataset.take(-1):
 
 # After validation, we store our total dataframe
 # We also add them image names of the validation images, x_val correponds 1-to-1 with the order of the predictions, so we just add
-confidence_scores.to_csv("New_folder//total_confidence_scores.csv", sep = ';', encoding = "utf-8")
+confidence_scores.to_csv("<Path_to_store_total_confidence_score>", sep = ';', encoding = "utf-8")
 
     
-# =============================================================================
-# # Store the erroneous predictions
-# with open('misses.txt', 'w') as f:
-#     new_list = map(str, misses)
-#     f.write(",\n".join(new_list))
-# 
-# =============================================================================
         
         
 
