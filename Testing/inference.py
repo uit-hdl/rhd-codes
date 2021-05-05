@@ -17,7 +17,7 @@ from datetime import datetime
 
 def encode_single_sample_inference(img):
     # 1. Read image
-    # For us, this is just the byte data from the database
+    # For inference, this is just the byte data from the database
     #img = tf.io.read_file(img_path)
     # 2. Decode and convert to grayscale
     img = tf.io.decode_png(img, channels=1)
@@ -50,7 +50,7 @@ def decode_batch_predictions(pred):
 # Get images from the database
 def get_images(cur, start, end):
     
-    data = cur.execute("<Select_query_for_images>").fetchall()
+    data = cur.execute("SELECT Name, Image FROM fields WHERE ROWID > {} AND ROWID < {}".format(start, end)).fetchall()
     
     return data
     
@@ -70,8 +70,9 @@ batch_size = 50000
 max_length = 3
 
 # Our "classes"
-# Defining this list and the order of the "classes" will make sure that the output is propperly mapped back
-characters = ['b', '1', '0', '2', '5', '6', '7', 't', '9', '8', '4', '3', 'u']
+# Read in the characters from the file that was created during training to make sure that the outputs get mapped back correctly
+with open('characters.txt', 'r') as file:
+    characters = file.readlines()
 
 # Mapping characters to integers
 char_to_num = layers.experimental.preprocessing.StringLookup(vocabulary = list(characters), num_oov_indices=0, mask_token = None)
@@ -141,11 +142,12 @@ def main(batch_index, start, end, cur, prediction_model, exclusion_set):
         conf_start = preds[i].max(axis = 1)
         lab_start = np.argmax(preds[i], axis = 1)
 
-        
+
         # Remove the confidences that were put as "Blank"
         confs = np.delete(conf_start, np.where(lab_start == 13))
         
         # If we don't get 3 confidence scores back, we can't prooperly classify the image. We set all confidence scores to be 0
+        # Keep this step in mind when evaluating the results
         if len(confs) != 3:
             confs = (0, 0, 0)
         
