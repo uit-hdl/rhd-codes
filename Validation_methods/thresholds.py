@@ -7,9 +7,22 @@ Created on Thu Feb 25 10:07:14 2021
 
 import pandas as pd
 import numpy as np
-
 import os
 import glob
+
+"""
+    Produces a csv file containing:
+    Threshold value,
+    Keep - How many images (in percentage) passed the threshold,
+    Send to manual - How many images (in percentage) did not pass the threshold,
+    
+    Additional values when thresholding training results:
+    Correct labels in keep -  How many images in Keep was predicted to have the correct label,
+    Incorrect labels in keep - How many images in Keep was predicted to have a wrong label,
+    Correct labels in send to manual - How many images in Send to manual was predicted to have the correct label,
+    Incorrect labels in send to manual - How many images in Send to manual was predicted to have a wrong label
+"""
+    
 
 def merge_batch_results(results_folder_path):
     
@@ -29,6 +42,7 @@ def thresholding(path, training = False):
     
     thresholds = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95]
     
+    # total_confidence_scores.csv are the results from running the full census through the model
     cf_frame = pd.read_csv(path + '//total_confidence_scores.csv', sep = ';', encoding = "utf-8")
     cf_frame.drop(cf_frame.columns[0], axis = 1, inplace = True)
     
@@ -94,7 +108,7 @@ def thresholding(path, training = False):
     
     # Round off to 2 decimals 
     output_frame = output_frame.round(2)
-    output_frame.to_csv(path + '//thresholds.csv', sep = ';', encoding = 'utf-8')
+    output_frame.to_csv(path + '//thresholds.csv', sep = ';', encoding = 'utf-8', index = False)
     
     
-thresholding('C:\\New_production_results\\CTC_dugnad')
+thresholding(<Path_to_model_results>)
