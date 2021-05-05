@@ -9,8 +9,20 @@ import numpy as np
 import pandas as pd
 import sqlite3
 
+""" 
+    Create a csv file containing:
+    Total images,
+    Threshold value,
+    Keep - How many images (in percentage) of the total passed the threshold,
+    To_manual - How many images (in percentage) of the total did not pass the threshold,
+    Valid classes - How many classes (in total) found in the results were also found in the training set,
+    Invalid classes - How many classes (in total) found in the results are obviously wrong,
+    Potentially valid classes -  How many classes (in total), were not in the training set But were also not obviously wrong,
+    A breakdown of the number of Valid/Invalid/Potentially valid images found in the total images.
+"""
+    
 
-training_path = '\\\\129.242.140.132\\remote\\UtklippsDatabaser\\dugnads_sett_no_u.db'
+training_path = '<Path to dugnad training database>'
 trainingset_con = sqlite3.connect(training_path)
 trainingset_c = trainingset_con.cursor()
 trainingset = trainingset_c.execute("SELECT NAME, CODE FROM CELLS").fetchall()
@@ -22,14 +34,16 @@ training_data['Labels'] = trainingset_codes
 training_data['Names'] = trainingset_names
 
 train_series = pd.Series(training_data['Labels'])
-train_dist = train_series.value_counts().rename_axis('Unique labels').reset_index(name = 'Count_training')     
+train_dist = train_series.value_counts().rename_axis('Unique labels').reset_index(name = 'Count_training')    
+
+# Rename our "junk" classes from 'b' to 'bbb', and 't' to 'ttt' to make sure we keep a label length of 3
 train_dist['Unique labels'].loc[4] = 'bbb'
 train_dist['Unique labels'].loc[8] = 'ttt'
-train_dist['Unique labels'].loc[279] = 'uuu'
+
 
 
 # Data from predictions on our entire dataset, or our validation set from training
-validationset = pd.read_csv('C:\\New_production_results\\CTC_dugnad\\total_confidence_scores.csv', sep = ';')
+validationset = pd.read_csv(<Path_to_results_file>)
 frame = validationset[['C0', 'C1', 'C2']]
 non_numeric = validationset[['Image_name', 'Predicted_Label']]
 
@@ -127,4 +141,4 @@ for t in thresholds:
     
         
     
-results.to_csv('Scatterplots_prod//label_validation.csv', sep = ';', encoding = 'utf-8', index = False)
+results.to_csv(<path_to_store_results>, sep = ';', encoding = 'utf-8', index = False)
