@@ -158,7 +158,7 @@ def decode_batch_predictions(pred):
 
 
     
-
+# Your images should be stored in a folder
 data_dir = Path("<Path_to_your_images>")
 images = sorted(list(map(str, list(data_dir.glob("*.jpg")))))
 labels = [img.split(os.path.sep)[-1].split("-")[0] for img in images]
@@ -189,7 +189,7 @@ img_height = 115
 # Two * (2,2) => 2 * 2 = 4
 downsample_factor = 4
 
-# Maximum length of any captcha in the dataset
+# Maximum length of any label in the dataset
 max_length = max([len(label) for label in labels])
 
 # Mapping characters to integers
@@ -199,7 +199,7 @@ char_to_num = layers.experimental.preprocessing.StringLookup(vocabulary = list(c
 num_to_char = layers.experimental.preprocessing.StringLookup(vocabulary=char_to_num.get_vocabulary(), mask_token=None, invert=True)
 
 
-# Splitting daya into training and validation sets
+# Splitting data into training and validation sets
 x_train, x_valid, y_train, y_valid = split_data(np.array(images), np.array(labels))
 
 
@@ -273,6 +273,10 @@ batch_index = 0
 # Create a dataframe to hold confidence scores for all validaiton images
 confidence_scores = pd.DataFrame(columns = ['Image_name', 'Predicted_Label', 'Actual_Label', 'C0', 'C1', 'C2'])
 
+# Create a folder to store the results from the prediction
+if not os.path.exists('Results_folder'):
+    os.makedirs('Results_folder')
+
 # Check results on some validation samples
 # take(-1) gives All the images in the validation/training/whatever set, but in batches of the batch-size we've given
 # For the example, the validation set, the batch size is 16, so validation_dataset.take(1) gives One batch of 16 images/labels.
@@ -333,16 +337,16 @@ for batch in validation_dataset.take(-1):
             
         
         
-        # Store image
+        # Store image in a folder with the prediction being the 
         img = (batch_images[i] * 255).numpy().astype("uint8")
         img = img[:, :, 0].T
         lbl = pred_texts[i] + '.png'
-        lbl = "<Path_to_store_image>"
+        lbl = "Results_folder//" + str(batch_index) + "//image_nr_" + str(i) + '_' + lbl
         cv2.imwrite(lbl, img)
         
 
     # At the end of the batch, we store the batch dataframe, and we also append it to our total dataframe
-    confidence_scores_batch.to_csv("<Path_to_store_batch_confidence_scores>", sep = ';', encoding = "utf-8")
+    confidence_scores_batch.to_csv("Results_folder//{}//confidence_scores.csv".format(batch_index), sep = ';', encoding = "utf-8")
     confidence_scores = confidence_scores.append(confidence_scores_batch, ignore_index = True)
     
     print(batch_index)
@@ -351,7 +355,7 @@ for batch in validation_dataset.take(-1):
 
 # After validation, we store our total dataframe
 # We also add them image names of the validation images, x_val correponds 1-to-1 with the order of the predictions, so we just add
-confidence_scores.to_csv("<Path_to_store_total_confidence_score>", sep = ';', encoding = "utf-8")
+confidence_scores.to_csv("Results_folder//total_confidence_scores.csv", sep = ';', encoding = "utf-8")
 
     
         
