@@ -113,6 +113,9 @@ def total_error_per_propotion(scores, N):
     y_ticks = [0.01, 0.02, 0.03, 0.04, 0.05]
     ax.yaxis.set_ticks(y_ticks)
     
+    y_tick_lablels = [str(int(y*100)) + '%' for y in y_ticks]
+    ax.set_yticklabels(y_tick_lablels)
+    
     ax.set_xlabel("Proportion of errors sent to manual validation and correction", labelpad = 10)
     ax.set_ylabel("Total error", labelpad = 10)
     
@@ -121,42 +124,44 @@ def total_error_per_propotion(scores, N):
     
     
     
-def derivate_error(scores, N):
-    
-    y = (scores["Keep_wrong"] + 
-    0.03*(scores["Manual_correct"] + scores["Manual_wrong"]))/N
-         
-    x = (scores["Manual_correct"] + scores["Manual_wrong"])/N
-    
-    
-    dy = [y[i] - y[i-1] for i in range(1, len(y))]
-    dx = [x[i] - x[i-1] for i in range(1, len(x))]
-    dydx = [dy[i]/dx[i] for i in range(len(dx))]
-    
-    color = np.array(Color_space['Blue'])
-    
-    fig, ax = plt.subplots()
-    
-    ax.plot(x[1:], dydx, c = color/255, linestyle = '-', zorder = 0) 
-    
-    ax.scatter(x[1:], dydx, c = color/255, s=20, zorder=1)
-
-    # Remove top and right axis lines
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    
-    # Set the start/stop of the x/y axis lines
-    ax.spines['bottom'].set_bounds(0, 0.12) 
-    ax.spines['left'].set_bounds(-0.1, -0.8) 
-    
-    ax.set_xlabel("Proportion of errors sent to manual validation and correction", labelpad = 10)
-    ax.set_ylabel("Change in error (dy/dx)", labelpad = 10)
-    
-    plt.xlim(-0.01, 0.12)
-    plt.ylim(-0.85, -0.1)
-    
-    #plt.show()
-    plt.savefig('paper_plots\\derivative_change_in_error.png', dpi = 300)
+# =============================================================================
+# def derivate_error(scores, N):
+#     
+#     y = (scores["Keep_wrong"] + 
+#     0.03*(scores["Manual_correct"] + scores["Manual_wrong"]))/N
+#          
+#     x = (scores["Manual_correct"] + scores["Manual_wrong"])/N
+#     
+#     
+#     dy = [y[i] - y[i-1] for i in range(1, len(y))]
+#     dx = [x[i] - x[i-1] for i in range(1, len(x))]
+#     dydx = [dy[i]/dx[i] for i in range(len(dx))]
+#     
+#     color = np.array(Color_space['Blue'])
+#     
+#     fig, ax = plt.subplots()
+#     
+#     ax.plot(x[1:], dydx, c = color/255, linestyle = '-', zorder = 0) 
+#     
+#     ax.scatter(x[1:], dydx, c = color/255, s=20, zorder=1)
+# 
+#     # Remove top and right axis lines
+#     ax.spines['top'].set_visible(False)
+#     ax.spines['right'].set_visible(False)
+#     
+#     # Set the start/stop of the x/y axis lines
+#     ax.spines['bottom'].set_bounds(0, 0.12) 
+#     ax.spines['left'].set_bounds(-0.1, -0.8) 
+#     
+#     ax.set_xlabel("Proportion of errors sent to manual validation and correction", labelpad = 10)
+#     ax.set_ylabel("Change in error (dy/dx)", labelpad = 10)
+#     
+#     plt.xlim(-0.01, 0.12)
+#     plt.ylim(-0.85, -0.1)
+#     
+#     #plt.show()
+#     plt.savefig('paper_plots\\derivative_change_in_error.png', dpi = 300)
+# =============================================================================
     
     
 def send_to_manual_per_threshold(scores, N):
@@ -168,40 +173,72 @@ def send_to_manual_per_threshold(scores, N):
     
     color = np.array(Color_space['Blue'])
     
-    ax.plot(x, y, linestyle = '-', linewidth = 1.5, c = color/255, zorder = 1)
+    # Plotting the Accuracy (Of the X images that passed each threshold, how many of them were Correct) as a second y-axis
+    scores['Passed_threshold'] = scores['Keep_correct'] + scores['Keep_wrong']
+    y2 = (scores['Keep_correct'] / scores['Passed_threshold']) * 100
+    color2 = np.array(Color_space['Orange'])
+    ax2 = ax.twinx()
+    
+    
+    line1 = ax.plot(x, y, linestyle = '-', linewidth = 1.5, c = color/255, zorder = 1, label = 'Proportion sent to manual')
     
     ax.scatter(x, y, c = color/255, s = 20, zorder = 3)
     
     ci = 1.6 * math.sqrt(np.mean(y) * (1-np.mean(y)) / N)
     ax.fill_between(x, (y-ci), (y+ci), color = np.array(Color_space['Grey'])/255, alpha = .4)
-    ax.text(0.65, 0.55, '90% interval', horizontalalignment = 'center', verticalalignment = 'center', transform = ax.transAxes, color = np.array(Color_space['Grey'])/255, alpha = .8)
-    
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    
-    ax.spines['bottom'].set_bounds(.05, .95) 
-    ax.spines['left'].set_bounds(0, 0.12) 
-    
-    x_ticks = [x/100.0 for x in range(5, (95 + 1), 15)] 
-    ax.xaxis.set_ticks(x_ticks)
-    
-    y_ticks = [y/100.0 for y in range(0, 12 + 1, 2)]
-    ax.yaxis.set_ticks(y_ticks)
+    ax.text(0.85, 0.25, '90% interval', horizontalalignment = 'center', verticalalignment = 'center', transform = ax.transAxes, color = np.array(Color_space['Grey'])/255, alpha = .8)
     
     ax.set_xlabel("Confidence threshold", labelpad = 10)
     ax.set_ylabel("Proportion sent to manual", labelpad = 10)
     
-    ax.set_xlim([-.05, ax.get_xlim()[1]])
-    ax.set_ylim([-.01, ax.get_ylim()[1]])
+    line2 = ax2.plot(x, y2, linestyle = '-', linewidth = 1.5, c = color2/255, zorder = 1, label = 'Accuracy per threshold')
+    ax2.scatter(x, y2, c = color2/255, s = 20, zorder = 3)
     
+    ax2.set_ylabel('Accuracy per threshold', labelpad = 10)
+    
+    ax.set_xlim([-.05, ax.get_xlim()[1] + 0.05])
+    ax.set_ylim([-.01, ax.get_ylim()[1]])
+    ax2.set_ylim([95, 100])
+    
+    ax.spines['top'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    
+    ax.spines['bottom'].set_bounds(.05, .95)
+    ax2.spines['bottom'].set_bounds(.05, .95)
+    
+    ax.spines['left'].set_bounds(0, 0.12) 
+    ax2.spines['left'].set_bounds(96, 100) 
+    
+    y_ticks_1 = [y/100.0 for y in range(0, 12 + 1, 2)]
+    ax.yaxis.set_ticks(y_ticks_1)
+    
+    x_ticks = [x/100.0 for x in range(5, (95 + 1), 15)] 
+    ax.xaxis.set_ticks(x_ticks)
+    
+    y1_tick_labels = [str(int(y*100)) + '%' for y in y_ticks_1]
+    ax.set_yticklabels(y1_tick_labels)
+    
+    y2_ticks = [95, 96, 97, 98, 99, 100]
+    y2_tick_lablels = [str(y) + '%' for y in y2_ticks]
+    ax2.set_yticklabels(y2_tick_lablels)
+    
+    # Legend
+    labels = line1 + line2
+    legends = [l.get_label() for l in labels]
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+    ax.legend(labels, legends, loc='upper center', bbox_to_anchor=(0.5, -0.2), frameon = False, ncol=2)
+    
+    
+    plt.tight_layout()
     #plt.show()
-    plt.savefig('paper_plots\\manual_per_threshold.png', dpi = 300)
+    plt.savefig('paper_plots\\manual_accuracy_perThreshold.png', dpi = 300, bbox_inches = 'tight')
     
     
 def sentToManual_CorrectVsIncorrect():
     
     # v here is the thresholds csv file generated by thresholds.py for the training results.
-    v = pd.read_csv(<Path_to_thresholding_file_here>, sep = ';')
+    v = pd.read_csv("C:\\New_production_results\\CTC_dugnad\\production_example_thresholds.csv", sep = ';')
     v = v[['Threshold level', 'Send to manual', 'Correct labels in send to manual', 'Incorrect labels in send to manual']]
     
     # Clean and reformat
@@ -215,7 +252,6 @@ def sentToManual_CorrectVsIncorrect():
     fig, ax = plt.subplots()
     
     ax.stackplot(x, y, labels = ['Correct images sent to manual', 'Incorrect images sent to manual'], colors = colors)
-    ax.legend(loc = 'upper left')
     
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -547,38 +583,46 @@ def cumulative_dist(old_trainingset_path):
     
 
 # Plotting
-sentToManual_CorrectVsIncorrect()
+#sentToManual_CorrectVsIncorrect()
     
 # Threshold values from the Verification dataset that were given as output from the model
-path = <Path_to_real-value_thresholding_file_here>
+path = "C://New_production_results//CTC_dugnad//production_example_thresholds_real.csv"
 scores = round(pd.read_csv(path, delimiter=";"))
 N = sum(scores.iloc[1, 1:]) # sum of counts along one row is total number of obs.
 
-# Plots using those data sources #
+# =============================================================================
+# # Plots using those data sources #
+# total_error_per_propotion(scores, N)
+# derivate_error(scores, N)
+# send_to_manual_per_threshold(scores, N)
+# 
+# 
+# # The path to the Dugnad training set database
+# trainingset_path = '\\\\129.242.140.132\\remote\\UtklippsDatabaser\\dugnads_sett_no_u.db'
+# 
+# # The path to the full census results
+# results = "C://New_production_results//CTC_dugnad//total_confidence_scores.csv"
+# 
+# # Plots using that data source #
+# character_frequency(trainingset_path)
+# new_distribution(trainingset_path, results)
+# 
+# 
+# # The path to the old results from the 3-digit model
+# old_results_path = 'C:\\New_production_results\\11_2020\\All_results.csv'
+# # The path to the old training set (2% set)
+# old_trainingset_path = '\\\\129.242.140.132\\remote\\UtklippsDatabaser\\full_3digit_trainingset.db'
+# 
+# # Plots using those data sources #
+# cumulative_dist(old_trainingset_path)
+# old_distribution(old_trainingset_path, old_results_path)
+# 
+# =============================================================================
+
+
+
+
 total_error_per_propotion(scores, N)
-derivate_error(scores, N)
-send_to_manual_per_threshold(scores, N)
-
-
-# The path to the Dugnad training set database
-trainingset_path = <Path_to_Dugnad_trainingset_database_here>
-
-# The path to the full census results
-results = <Path_to_full_census_results_here>
-
-# Plots using that data source #
-character_frequency(trainingset_path)
-new_distribution(trainingset_path, results)
-
-
-# The path to the old results from the 3-digit model
-old_results_path = <Path_to_old_results_here>
-# The path to the old training set (2% set)
-old_trainingset_path = <Path_to_old_trainingset_database_here>
-
-# Plots using those data sources #
-cumulative_dist(old_trainingset_path)
-old_distribution(old_trainingset_path, old_results_path)
 
 
 
