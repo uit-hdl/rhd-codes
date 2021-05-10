@@ -583,41 +583,39 @@ def cumulative_dist(old_trainingset_path):
     
 
 # Plotting
-#sentToManual_CorrectVsIncorrect()
+sentToManual_CorrectVsIncorrect()
     
 # Threshold values from the Verification dataset that were given as output from the model
 path = "C://New_production_results//CTC_dugnad//production_example_thresholds_real.csv"
 scores = round(pd.read_csv(path, delimiter=";"))
 N = sum(scores.iloc[1, 1:]) # sum of counts along one row is total number of obs.
 
-# =============================================================================
-# # Plots using those data sources #
-# total_error_per_propotion(scores, N)
-# derivate_error(scores, N)
-# send_to_manual_per_threshold(scores, N)
-# 
-# 
-# # The path to the Dugnad training set database
-# trainingset_path = '\\\\129.242.140.132\\remote\\UtklippsDatabaser\\dugnads_sett_no_u.db'
-# 
-# # The path to the full census results
-# results = "C://New_production_results//CTC_dugnad//total_confidence_scores.csv"
-# 
-# # Plots using that data source #
-# character_frequency(trainingset_path)
-# new_distribution(trainingset_path, results)
-# 
-# 
-# # The path to the old results from the 3-digit model
-# old_results_path = 'C:\\New_production_results\\11_2020\\All_results.csv'
-# # The path to the old training set (2% set)
-# old_trainingset_path = '\\\\129.242.140.132\\remote\\UtklippsDatabaser\\full_3digit_trainingset.db'
-# 
-# # Plots using those data sources #
-# cumulative_dist(old_trainingset_path)
-# old_distribution(old_trainingset_path, old_results_path)
-# 
-# =============================================================================
+# Plots using those data sources #
+total_error_per_propotion(scores, N)
+#derivate_error(scores, N)
+send_to_manual_per_threshold(scores, N)
+
+
+# The path to the Dugnad training set database
+trainingset_path = '\\\\129.242.140.132\\remote\\UtklippsDatabaser\\dugnads_sett_no_u.db'
+
+# The path to the full census results
+results = "C://New_production_results//CTC_dugnad//total_confidence_scores.csv"
+
+# Plots using that data source #
+character_frequency(trainingset_path)
+new_distribution(trainingset_path, results)
+
+
+# The path to the old results from the 3-digit model
+old_results_path = 'C:\\New_production_results\\11_2020\\All_results.csv'
+# The path to the old training set (2% set)
+old_trainingset_path = '\\\\129.242.140.132\\remote\\UtklippsDatabaser\\full_3digit_trainingset.db'
+
+# Plots using those data sources #
+cumulative_dist(old_trainingset_path)
+old_distribution(old_trainingset_path, old_results_path)
+
 
 
 
