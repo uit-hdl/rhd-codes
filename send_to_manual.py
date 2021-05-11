@@ -9,8 +9,6 @@ import pandas as pd
 import numpy as np
 import sqlite3
 
-""" Til Bjørn: Fjern "should" når du har fått faktisk tall og dem stemmer """
-
 """ 
     Script to generate a list of the names of images that should be sent to manual validation and correction.
     Criteria for this is:
