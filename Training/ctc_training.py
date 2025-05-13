@@ -164,7 +164,7 @@ images = sorted(list(map(str, list(data_dir.glob("*.jpg")))))
 labels = [img.split(os.path.sep)[-1].split("-")[0] for img in images]
 names = [x.split('-')[1].split('.')[0] for x in images]
 
-characters = set(char for label in labels for char in label)
+characters = sorted(set(char for label in labels for char in label))
 
 # Store characters. Because the order they appear in here will need to be the same they appear in when doing inference
 with open('characters.txt', 'w') as f:
