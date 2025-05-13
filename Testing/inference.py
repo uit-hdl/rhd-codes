@@ -50,7 +50,7 @@ def decode_batch_predictions(pred):
 # Get images from the database
 def get_images(cur, start, end):
     
-    data = cur.execute("SELECT Name, Image FROM fields WHERE ROWID > {} AND ROWID < {}".format(start, end)).fetchall()
+    data = cur.execute("SELECT Name, Image FROM <table_name> WHERE ROWID > {} AND ROWID < {}".format(start, end)).fetchall()
     
     return data
     
