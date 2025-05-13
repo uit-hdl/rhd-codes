@@ -22,12 +22,12 @@ batch_index = 0
 
 
 # Get cursor from the database
-db = sqlite3.connect("<Path_to_the_full_census_database>")
+db = sqlite3.connect("<Path_to_the_full_database>")
 cur = db.cursor()
 
 # Exclusion set
-training_db = sqlite3.connect("<Path_to_the_dugnad_database>")
-exclusion_names = training_db.cursor().execute("SELECT Name FROM cells").fetchall()
+training_db = sqlite3.connect("<Path_to_the_trainingset_database>")
+exclusion_names = training_db.cursor().execute("SELECT Name FROM <table_name>").fetchall()
 exclusion_set = [x[0] for x in exclusion_names]
     
 # Prediction model
