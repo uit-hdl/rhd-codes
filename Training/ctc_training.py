@@ -257,7 +257,7 @@ prediction_model = keras.models.Model(
 )
 prediction_model.summary()
 
-prediction_model.save("<Path_to_store_the_model>")
+prediction_model.save("my_model")
       
 
 # Lists used to determine number of "correct" and "uncorrect" predictions
