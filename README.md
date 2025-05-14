@@ -27,6 +27,6 @@ The training dataset used in the project was manually labeled by our team at His
 For questions or feedback, please reach out to the project maintainers at bjorn-richard.pedersen@uit.no
 
 ## References
-For more details about the project and the custom GUI used for labeling, please refer to the [accompanying paper](https://doi.org/10.51964/hlcs11331).
+For more details about the project and the custom GUI used for labeling, as well as general lessons learned for creating a ML transcription pipeline, please refer to the [accompanying paper](https://doi.org/10.51964/hlcs11331).
 
 More information about the custom GUI as well as the manual work done to validate the model's outputs can be found in our [follow-up paper](https://doi.org/10.51964/hlcs15456).
